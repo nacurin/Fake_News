@@ -1,0 +1,171 @@
+import pandas as pd
+import sys
+import csv
+import gensim
+from sklearn import datasets
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+import numpy as np
+from random import shuffle
+
+LabeledSentence = gensim.models.doc2vec.LabeledSentence
+Doc2Vec = gensim.models.doc2vec
+TaggedDocument = gensim.models.doc2vec.TaggedDocument
+#pycharm script is "main.py test_bodies.csv test_stances.csv answers.csv"
+file_name= sys.argv[1]
+body_path = sys.argv[2]
+train_path = sys.argv[3]
+dev_path=sys.argv[4]
+answer_path = sys.argv[5]
+
+'''
+iris = datasets.load_iris()
+X = iris.data.tolist()
+X = np.array(X)
+X,y =iris.data,iris.target
+
+a = OneVsOneClassifier(LinearSVC(random_state=0)).fit(X,y).predict(X)
+'''
+dev = pd.read_csv(dev_path)
+dev = dev.T
+dev = dev.to_dict(orient = 'list')
+#read train datas which are in project folder
+train_data = pd.read_csv(train_path)
+train_data = train_data.T
+train = train_data.to_dict(orient = 'list')
+
+
+body_data=pd.read_csv(body_path)
+#body_data=body_data.head(20)
+body_data=body_data.T
+body=body_data.to_dict(orient = 'list')  #train data's structure is dict[]:0:headline 1:body id 2:stance 3:body
+
+body_dict = dict()
+for k,v in body.items():
+    body_dict[body[k][0]]=body[k][1]
+
+#input
+# data = pd.read_csv('bodies.csv')
+# titleID = data[[0]]
+# body = data[[1]]
+# print(titleID)
+# print(body)
+
+def labelizeReviews(texts, label_type):
+    labelized = []
+    for i, v in enumerate(texts):
+        label = '%s_%s' % (label_type, i)
+        labelized.append(LabeledSentence(v, [label]))
+    return labelized
+
+corpora_documents = []
+temp = ["test"]
+for key in body:
+    temp.append(body[key][1])
+
+raw_documents = temp
+
+print("start lebal documents")
+
+for i, item_text in enumerate(raw_documents):
+    words_list = raw_documents[i].split()
+    document = TaggedDocument(words=words_list, tags=[i])
+    corpora_documents.append(document)
+
+print("start establish model")
+
+#establish model
+model = gensim.models.Doc2Vec(size=2, min_count=1, window=10, sample=1e-3, negative=5, workers=3)
+model_dbow = gensim.models.Doc2Vec(size=2, min_count=1, window=10, sample=1e-3, negative=5, dm=0, workers=3)
+
+#build_vocab
+print("start build vocab")
+model.build_vocab(corpora_documents)
+model_dbow.build_vocab(corpora_documents)
+
+#first train
+print("start first train")
+model.train(corpora_documents)
+model_dbow.train(corpora_documents)
+
+# corpora_documents = numpy.array(corpora_documents)
+# for epoch in range(10):
+#     perm = numpy.random.permutation(corpora_documents.shape[0])
+#     model.train(corpora_documents[perm])
+#     model_dbow.train(corpora_documents[perm])
+
+'''
+print(model)
+print("#####")
+print(model_dbow)
+'''
+def calculateVec(text):
+    return model_dbow.infer_vector(text)
+#print(calculateVec("a apple"))
+
+# build classifier
+input = []
+for key in train:
+    index = train[key][1]
+    val1 = calculateVec(train[key][0]).tolist()
+    val2 = calculateVec(body_dict[index]).tolist()
+    temp = val1 + val2
+    input.append(temp)
+input = np.array(input)
+
+target = []
+for key in train:
+    label = train[key][2]
+    if label == 'unrelated':
+        temp = 0
+    elif label == 'agree':
+        temp = 1
+    elif label == 'disagree':
+        temp = 2
+    elif label == 'discuss':
+        temp = 3
+    target.append(temp)
+target = np.array(target)
+X,y = input,target
+
+dev_data = []
+for key in dev:
+    index = dev[key][1]
+    val1 = calculateVec(dev[key][0]).tolist()
+    val2 = calculateVec(body_dict[index]).tolist()
+    temp = val1 + val2
+    dev_data.append(temp)
+dev_data = np.array(dev_data)
+
+cls = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X,y)
+answer = cls.predict(X)
+
+ans = answer.tolist()
+result = []
+for k in ans:
+    label = ans[k]
+    if label == 0:
+        temp = 'unrelated'
+    elif label == 1:
+        temp = 'agree'
+    elif label == 2:
+        temp = 'disagree'
+    elif label == 3:
+        temp = 'discuss'
+    result.append(temp)
+
+a = 1
+def creatCsv(fileName = "", data =[]):
+    with open(fileName,"w") as csvFile:
+        csvWriter = csv.writer(csvFile)
+        k=0
+        while k<len(data):
+            str = [data[k]]
+            csvWriter.writerow(str)
+            k += 1
+        csvFile.close()
+
+creatCsv(answer_path,result)
+
+print ("test finished")
+ans=1
