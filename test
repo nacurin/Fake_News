@@ -29,6 +29,8 @@ a = OneVsOneClassifier(LinearSVC(random_state=0)).fit(X,y).predict(X)
 dev = pd.read_csv(dev_path)
 dev = dev.T
 dev = dev.to_dict(orient = 'list')
+
+
 #read train datas which are in project folder
 train_data = pd.read_csv(train_path)
 train_data = train_data.T
@@ -138,7 +140,7 @@ for key in dev:
 dev_data = np.array(dev_data)
 
 cls = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X,y)
-answer = cls.predict(X)
+answer = cls.predict(dev_data)
 
 ans = answer.tolist()
 result = []
@@ -154,13 +156,28 @@ for k in ans:
         temp = 'discuss'
     result.append(temp)
 
-a = 1
+temp = result
+temp1 = []
+temp2 = []
+
+for key in dev:
+    temp1.append(dev[key][0])
+    temp2.append(dev[key][1])
+
+j=0
+result = []
+result.append(["headline" ,"Body ID" ,"stance" ])
+while j < 4000:
+    tempUnit = [temp1[j], temp2[j], temp[j]]
+    result.append(tempUnit)
+    j += 1
+
 def creatCsv(fileName = "", data =[]):
     with open(fileName,"w") as csvFile:
         csvWriter = csv.writer(csvFile)
         k=0
-        while k<len(data):
-            str = [data[k]]
+        while k<len(result):
+            str = result[k]
             csvWriter.writerow(str)
             k += 1
         csvFile.close()
