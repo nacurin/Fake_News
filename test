@@ -2,9 +2,15 @@ import pandas as pd
 import sys
 import csv
 import gensim
+import scipy
 from sklearn import datasets
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
+from nltk.corpus import stopwords
+import nltk
+from nltk.stem import *
+
+from numpy import *
 import numpy as np
 from random import shuffle
 
@@ -24,8 +30,9 @@ X = iris.data.tolist()
 X = np.array(X)
 X,y =iris.data,iris.target
 
-a = OneVsOneClassifier(LinearSVC(random_state=0)).fit(X,y).predict(X)
+a = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X,y).predict(X)
 '''
+
 dev = pd.read_csv(dev_path)
 dev = dev.T
 dev = dev.to_dict(orient = 'list')
@@ -41,6 +48,36 @@ body_data=pd.read_csv(body_path)
 #body_data=body_data.head(20)
 body_data=body_data.T
 body=body_data.to_dict(orient = 'list')  #train data's structure is dict[]:0:headline 1:body id 2:stance 3:body
+temp1 = []
+temp2 = []
+
+for key in dev:
+    temp1.append(dev[key][0])
+    temp2.append(dev[key][1])
+
+def cleanword(a):
+    a = nltk.tokenize.word_tokenize(a)  # tokenize
+    a = [word.lower() for word in a]  # lower words
+    a = [w for w in a if (w not in stopwords.words('english'))]  # remove stopwords
+    english_punctuations = [',', '.', ':', ';', '?', '(', ')', '[', ']', '!', '@', '#', '%', '$', '*', '``']
+    a = [word for word in a if (word not in english_punctuations)]
+    #  a = [word for word in a if word.isalpha()]
+    stemmer = SnowballStemmer("english")
+    a = [stemmer.stem(word) for word in a]
+    str = ""
+    for s in a:
+        str = str + " " + s
+
+    return str
+
+for key in dev:
+    dev[key][0] = cleanword(dev[key][0])
+
+for key in body:
+    body[key][1] = cleanword(body[key][1])
+
+for key in train:
+    train[key][0] = cleanword(train[key][0])
 
 body_dict = dict()
 for k,v in body.items():
@@ -77,8 +114,8 @@ for i, item_text in enumerate(raw_documents):
 print("start establish model")
 
 #establish model
-model = gensim.models.Doc2Vec(size=2, min_count=1, window=10, sample=1e-3, negative=5, workers=3)
-model_dbow = gensim.models.Doc2Vec(size=2, min_count=1, window=10, sample=1e-3, negative=5, dm=0, workers=3)
+model = gensim.models.Doc2Vec(size=5, min_count=1, window=10, sample=1e-3, negative=5, workers=3)
+model_dbow = gensim.models.Doc2Vec(size=5, min_count=1, window=10, sample=1e-3, negative=5, dm=0, workers=3)
 
 #build_vocab
 print("start build vocab")
@@ -96,14 +133,11 @@ model_dbow.train(corpora_documents)
 #     model.train(corpora_documents[perm])
 #     model_dbow.train(corpora_documents[perm])
 
-'''
-print(model)
-print("#####")
-print(model_dbow)
-'''
+
 def calculateVec(text):
     return model_dbow.infer_vector(text)
 #print(calculateVec("a apple"))
+
 
 # build classifier
 input = []
@@ -111,9 +145,12 @@ for key in train:
     index = train[key][1]
     val1 = calculateVec(train[key][0]).tolist()
     val2 = calculateVec(body_dict[index]).tolist()
-    temp = val1 + val2
-    input.append(temp)
+    val1 = np.array(val1)
+    val2 = np.array(val2)
+    temp = scipy.spatial.distance.cosine(val1, val2)
+    input.append([temp])
 input = np.array(input)
+#input = reshape(input, 40000)
 
 target = []
 for key in train:
@@ -128,6 +165,7 @@ for key in train:
         temp = 3
     target.append(temp)
 target = np.array(target)
+#target = reshape(target, 40000)
 X,y = input,target
 
 dev_data = []
@@ -135,9 +173,13 @@ for key in dev:
     index = dev[key][1]
     val1 = calculateVec(dev[key][0]).tolist()
     val2 = calculateVec(body_dict[index]).tolist()
-    temp = val1 + val2
-    dev_data.append(temp)
+    val1 = np.array(val1)
+    val2 = np.array(val2)
+    temp = scipy.spatial.distance.cosine(val1, val2)
+
+    dev_data.append([temp])
 dev_data = np.array(dev_data)
+#dev_data = reshape(dev_data, 4000)
 
 cls = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X,y)
 answer = cls.predict(dev_data)
@@ -157,12 +199,6 @@ for k in ans:
     result.append(temp)
 
 temp = result
-temp1 = []
-temp2 = []
-
-for key in dev:
-    temp1.append(dev[key][0])
-    temp2.append(dev[key][1])
 
 j=0
 result = []
