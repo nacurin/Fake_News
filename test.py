@@ -3,7 +3,6 @@ import sys
 import csv
 import gensim
 import scipy
-from sklearn import linear_model
 from sklearn import datasets
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
@@ -14,8 +13,6 @@ from nltk.stem import *
 from numpy import *
 import numpy as np
 from random import shuffle
-
-from input import data
 
 LabeledSentence = gensim.models.doc2vec.LabeledSentence
 Doc2Vec = gensim.models.doc2vec
@@ -40,10 +37,12 @@ dev = pd.read_csv(dev_path)
 dev = dev.T
 dev = dev.to_dict(orient = 'list')
 
+
 #read train datas which are in project folder
 train_data = pd.read_csv(train_path)
 train_data = train_data.T
 train = train_data.to_dict(orient = 'list')
+
 
 body_data=pd.read_csv(body_path)
 #body_data=body_data.head(20)
@@ -59,12 +58,12 @@ for key in dev:
 def cleanword(a):
     a = nltk.tokenize.word_tokenize(a)  # tokenize
     a = [word.lower() for word in a]  # lower words
-    #a = [w for w in a if (w not in stopwords.words('english'))]  # remove stopwords
+    a = [w for w in a if (w not in stopwords.words('english'))]  # remove stopwords
     english_punctuations = [',', '.', ':', ';', '?', '(', ')', '[', ']', '!', '@', '#', '%', '$', '*', '``']
     a = [word for word in a if (word not in english_punctuations)]
     #  a = [word for word in a if word.isalpha()]
-    #stemmer = SnowballStemmer("english")
-    #a = [stemmer.stem(word) for word in a]
+    stemmer = SnowballStemmer("english")
+    a = [stemmer.stem(word) for word in a]
     str = ""
     for s in a:
         str = str + " " + s
@@ -165,7 +164,6 @@ for key in train:
     elif label == 'discuss':
         temp = 3
     target.append(temp)
-target = np.transpose(target)
 target = np.array(target)
 #target = reshape(target, 40000)
 X,y = input,target
@@ -183,7 +181,7 @@ for key in dev:
 dev_data = np.array(dev_data)
 #dev_data = reshape(dev_data, 4000)
 
-cls = OneVsRestClassifier(linear_model.LogisticRegression(random_state=0)).fit(X,y)
+cls = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X,y)
 answer = cls.predict(dev_data)
 
 ans = answer.tolist()
@@ -204,14 +202,14 @@ temp = result
 
 j=0
 result = []
-result.append(["Headline" ,"Body ID" ,"Stance" ])
+result.append(["headline" ,"Body ID" ,"stance" ])
 while j < 4000:
     tempUnit = [temp1[j], temp2[j], temp[j]]
     result.append(tempUnit)
     j += 1
 
 def creatCsv(fileName = "", data =[]):
-    with open(fileName,"w", encoding="utf-8") as csvFile:
+    with open(fileName,"w") as csvFile:
         csvWriter = csv.writer(csvFile)
         k=0
         while k<len(result):
