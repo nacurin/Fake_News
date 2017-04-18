@@ -1,0 +1,13 @@
+1 [cos ,1]
+2 y.t
+3 lg ?
+
+h=abcde
+b=xyz
+1 f(hb)= [cos, bigram(ab),bigram(bc),....,b-bigram, h-br&b-b-gra(ab&xy)
+replace [cos 1 0 1 ...]
+
+k1=v1 k2=v2 k1&k2=v1&v2 bag of words?  or just h-bi&b-bi get weight
+feature selection tool weka    liblinear python
+alphabet =
+fix after trainning  feature is fix

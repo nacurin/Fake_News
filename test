@@ -10,6 +10,7 @@ from sklearn.svm import LinearSVC
 from nltk.corpus import stopwords
 import nltk
 from nltk.stem import *
+import lda
 
 from numpy import *
 import numpy as np
@@ -134,11 +135,9 @@ model_dbow.train(corpora_documents)
 #     model.train(corpora_documents[perm])
 #     model_dbow.train(corpora_documents[perm])
 
-
 def calculateVec(text):
     return model_dbow.infer_vector(text)
 #print(calculateVec("a apple"))
-
 
 # build classifier
 input = []
@@ -182,6 +181,9 @@ for key in dev:
     dev_data.append([temp])
 dev_data = np.array(dev_data)
 #dev_data = reshape(dev_data, 4000)
+
+
+
 
 cls = OneVsRestClassifier(linear_model.LogisticRegression(random_state=0)).fit(X,y)
 answer = cls.predict(dev_data)

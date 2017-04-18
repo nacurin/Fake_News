@@ -4,10 +4,11 @@ import nltk
 import numpy as np
 from sklearn import feature_extraction
 from tqdm import tqdm
+import lda
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 _wnl = nltk.WordNetLemmatizer()
-
 
 def normalize_word(w):
     return _wnl.lemmatize(w).lower()
@@ -16,11 +17,6 @@ def normalize_word(w):
 def get_tokenized_lemmas(s):
     return [normalize_word(t) for t in nltk.word_tokenize(s)]
 
-
-def clean(s):
-    # Cleans a string: Lowercasing, trimming, removing non-alphanumeric
-
-    return " ".join(re.findall(r'\w+', s, flags=re.UNICODE)).lower()
 
 
 def remove_stopwords(l):
@@ -36,7 +32,10 @@ def gen_or_load_feats(feat_fn, headlines, bodies, feature_file):
     return np.load(feature_file)
 
 
+def clean(s):
+    # Cleans a string: Lowercasing, trimming, removing non-alphanumeric
 
+    return " ".join(re.findall(r'\w+', s, flags=re.UNICODE)).lower()#and add clean back
 
 def word_overlap_features(headlines, bodies):
     X = []
@@ -49,6 +48,8 @@ def word_overlap_features(headlines, bodies):
             len(set(clean_headline).intersection(clean_body)) / float(len(set(clean_headline).union(clean_body)))]
         X.append(features)
     return X
+
+
 
 
 def refuting_features(headlines, bodies):
